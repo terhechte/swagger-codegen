@@ -35,36 +35,36 @@ class AlamofireRequestBuilder<T>: RequestBuilder<T> {
             request.authenticate(usingCredential: credential)
         }
 
-        let defer = Promise<Response<T>>.defer()
+        let pendingPromise = Promise<Response<T>>.pendingPromise()
         request.responseJSON(options: .AllowFragments) { (req, res, json, error) in
             managerStore.removeValueForKey(managerId)
 
             if let error = error {
-                defer.reject(error)
+                pendingPromise.reject(error)
                 return
             }
             if res!.statusCode >= 400 {
                 //TODO: Add error entity
                 let error = NSError(domain: res!.URL!.URLString, code: res!.statusCode, userInfo: [:])
-                defer.reject(error)
+                pendingPromise.reject(error)
                 return
             }
 
             if () is T {
                 let response = Response(response: res!, body: () as! T)
-                defer.fulfill(response)
+                pendingPromise.fulfill(response)
                 return
             }
             if let json: AnyObject = json {
                 let body = Decoders.decode(clazz: T.self, source: json)
                 let response = Response(response: res!, body: body)
-                defer.fulfill(response)
+                pendingPromise.fulfill(response)
                 return
             }
             
-            defer.reject(NSError(domain: "localhost", code: 500, userInfo: ["reason": "unreacheable code"]))
+            pendingPromise.reject(NSError(domain: "localhost", code: 500, userInfo: ["reason": "unreacheable code"]))
         }
-        return defer.promise
+        return pendingPromise.promise
     }
 
     private func buildHeaders() -> [String: AnyObject] {
